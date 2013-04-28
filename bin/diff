@@ -1,0 +1,38 @@
+#!/usr/bin/env ruby
+
+require 'optparse'
+require File.expand_path('../../lib/diff', __FILE__)
+
+options = {}
+OptionParser.new { |opts|
+  opts.banner = "Usage: diff path_to_file_1 path_to_file_2 --waterline 5_000_000"
+
+  opts.on(
+    "-w",
+    "--waterline NUMBER",
+    "The number of rows read into RAM"
+  ) do |value|
+    options[:waterline] = value.to_i
+  end
+}.parse!
+
+path_1 = ARGV[0]
+path_2 = ARGV[1]
+
+[path_1, path_2].each do |path|
+  unless File.exists?(path)
+    puts "Error: file '#{path}' not found"
+    exit(1)
+  end
+end
+
+# Делим на 2 так как мы считываем строки одновременно из 2 файлов,
+# а waterline задает общую верхнюю границу потребления RAM.
+DiffFile.number_lines_to_read = options[:waterline] / 2
+diff = Diff.new(path_1, path_2)
+result = diff.compare
+
+puts "Added"
+puts result[:added].read
+puts "Deleted"
+puts result[:deleted].read
